@@ -126,7 +126,7 @@
 
         let rawImageInstance = null;
         let finalOutputBlob = null;
-        let currentObjectURL = null; // MEMORY TRACKER FOR UNLOADING ACTIVE RAM POOLS
+        let currentObjectURL = null; 
         let manualRotationDegrees = 0; 
         let initialSizeKBs = 0;
         const targetOutputFormat = 'image/jpeg';
@@ -507,22 +507,49 @@
             cropCanvas.width = cropW;
             cropCanvas.height = cropH;
             const cropCtx = cropCanvas.getContext('2d');
-            
             cropCtx.imageSmoothingEnabled = true;
             cropCtx.imageSmoothingQuality = 'high';
             cropCtx.drawImage(processingCanvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
 
-            const highQualitySetting = 0.98; 
-            finalOutputBlob = await new Promise(res => cropCanvas.toBlob(res, targetOutputFormat, highQualitySetting));
+            // FIXED HYBRID SIZE DOWN-SCALE PIPELINE (Strict target under 18 KB without letter degradation)
+            const MAX_BYTES = 18 * 1024;
+            let targetQuality = 0.92;
+            let currentBlob = await new Promise(res => cropCanvas.toBlob(res, targetOutputFormat, targetQuality));
 
-            // CRITICAL BUG FIX: Clear out the old object reference from the browser RAM map before creating a new one
+            // Phase A: Reduce quality slightly down to 0.70 first if needed
+            if (currentBlob.size > MAX_BYTES) {
+                targetQuality = 0.75;
+                currentBlob = await new Promise(res => cropCanvas.toBlob(res, targetOutputFormat, targetQuality));
+            }
+
+            // Phase B: If still over 18KB, scale visual footprint dimension dynamically using High-Quality Interpolation
+            let currentScale = 1.0;
+            let evaluationCanvas = cropCanvas;
+
+            while (currentBlob.size > MAX_BYTES && currentScale > 0.15) {
+                currentScale -= 0.10;
+                const scaleCanvas = document.createElement('canvas');
+                scaleCanvas.width = Math.max(50, Math.floor(cropW * currentScale));
+                scaleCanvas.height = Math.max(20, Math.floor(cropH * currentScale));
+                
+                const scaleCtx = scaleCanvas.getContext('2d');
+                scaleCtx.imageSmoothingEnabled = true;
+                scaleCtx.imageSmoothingQuality = 'high';
+                scaleCtx.drawImage(cropCanvas, 0, 0, scaleCanvas.width, scaleCanvas.height);
+                
+                evaluationCanvas = scaleCanvas;
+                currentBlob = await new Promise(res => evaluationCanvas.toBlob(res, targetOutputFormat, targetQuality));
+            }
+
+            finalOutputBlob = currentBlob;
+            
             clearActiveObjectURLs();
             currentObjectURL = URL.createObjectURL(finalOutputBlob);
             previewImage.src = currentObjectURL;
             
             origSizeEl.textContent = typeof initialSizeKBs === 'number' ? `${initialSizeKBs} KB` : initialSizeKBs;
             optSizeEl.textContent = `${(finalOutputBlob.size / 1024).toFixed(1)} KB`;
-            qualityPercEl.textContent = `${Math.round(highQualitySetting * 100)}%`;
+            qualityPercEl.textContent = `${Math.round(targetQuality * 100)}%`;
 
             downloadBtn.disabled = false;
             downloadBtn.textContent = "Download Image (JPG)";
