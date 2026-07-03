@@ -193,7 +193,6 @@
         
         let activeThresholdBias = 14;
         let targetInkProfile = 'black'; 
-        let masterFineSkew = 0; // Fixed variable to lock baseline adjustment
 
         let appStateStorage = { 'sig_image_counter': '1', 'sig_counter_last_reset': '0' };
         function fetchInternalValue(key) {
@@ -214,7 +213,6 @@
         }
         verifyAndClearDownloadIndex();
 
-        // Reliable Window Drag Event Counter Strategy
         let dragCounter = 0;
         window.addEventListener('dragenter', (e) => { 
             e.preventDefault(); 
@@ -248,15 +246,6 @@
             if (e.clipboardData.files && e.clipboardData.files.length > 0) {
                 for (let file of e.clipboardData.files) {
                     if (file.type.match('image.*')) { readInputPayload(file); return; }
-                }
-            }
-            const rawClipboardItems = e.clipboardData.items;
-            if (rawClipboardItems) {
-                for (let item of rawClipboardItems) {
-                    if (item.type.indexOf('image') === 0) {
-                        const file = item.getAsFile();
-                        if (file) { readInputPayload(file); return; }
-                    }
                 }
             }
         });
@@ -310,7 +299,7 @@
         function flushApplicationContext() {
             currentPipelineExecutionId++; 
             dropActiveBlobReferences();
-            masterImageMemory = null; finalOutputBlob = null; persistentAngleDegrees = 0; masterFineSkew = 0;
+            masterImageMemory = null; finalOutputBlob = null; persistentAngleDegrees = 0;
             activeThresholdBias = 14; densitySlider.value = 14; densityValue.textContent = "Normal";
             targetInkProfile = 'black'; updateColorButtons(colorBlack);
             fileInput.value = ''; previewImage.src = '';
@@ -341,7 +330,6 @@
                 placeholderText.classList.add('hidden');
                 previewBox.classList.remove('hidden');
                 persistentAngleDegrees = 0; 
-                masterFineSkew = 0;
                 processComputationalTransform(true); 
             };
             masterImageMemory.src = base64SourceData;
@@ -373,9 +361,7 @@
             let coreInkWidth = trueInkMaxX - trueInkMinX + 1;
             let coreInkHeight = trueInkMaxY - trueInkMinY + 1;
             
-            if (coreInkWidth <= coreInkHeight) {
-                return -500000 + (coreInkWidth - coreInkHeight);
-            }
+            if (coreInkWidth <= coreInkHeight) return -500000 + (coreInkWidth - coreInkHeight);
 
             let horizontalContinuityScore = 0;
             for (let y = trueInkMinY; y <= trueInkMaxY; y += 2) {
@@ -537,7 +523,8 @@
                     }
                     
                     const idx = (y * w + x) * 4;
-                    if (computedColorOutputValue < 240) {
+                    // Relaxed detection buffer (< 253) ensures high anti-aliasing preservation around fine cursive scripts
+                    if (computedColorOutputValue < 253) {
                         if (targetInkProfile === 'navy') {
                             linearDataPixels[idx]     = Math.floor(computedColorOutputValue * 0.1); 
                             linearDataPixels[idx + 1] = Math.floor(computedColorOutputValue * 0.2); 
@@ -554,7 +541,7 @@
                     }
                     linearDataPixels[idx + 3] = 255;
 
-                    if (computedColorOutputValue < 240) {
+                    if (computedColorOutputValue < 253) {
                         if (x < absoluteMinX) absoluteMinX = x; if (x > absoluteMaxX) absoluteMaxX = x;
                         if (y < absoluteMinY) absoluteMinY = y; if (y > absoluteMaxY) absoluteMaxY = y;
                         assetInkDetected = true;
@@ -564,17 +551,12 @@
             if (executionIdToken !== currentPipelineExecutionId) return;
             processingCtx.putImageData(frameBufferData, 0, 0);
 
-            // Compute fine skew only during the initial automated scan pass
-            if (runAutoDetectPass) {
-                masterFineSkew = computeMicroBaselineSkew(linearDataPixels, w, h);
-            }
-
-            // Apply locked master fine skew transformation cleanly across rotations
-            if (Math.abs(masterFineSkew) > 0.01) {
+            let calculatedFineSkew = computeMicroBaselineSkew(linearDataPixels, w, h);
+            if (Math.abs(calculatedFineSkew) > 0.01) {
                 const skewCanvas = document.createElement('canvas'); skewCanvas.width = w; skewCanvas.height = h;
                 const skewCtx = skewCanvas.getContext('2d');
                 skewCtx.fillStyle = '#ffffff'; skewCtx.fillRect(0, 0, w, h);
-                skewCtx.translate(w / 2, h / 2); skewCtx.rotate((masterFineSkew * Math.PI) / 180);
+                skewCtx.translate(w / 2, h / 2); skewCtx.rotate((calculatedFineSkew * Math.PI) / 180);
                 skewCtx.drawImage(processingCanvas, -w / 2, -h / 2);
                 
                 processingCtx.clearRect(0, 0, w, h); processingCtx.drawImage(skewCanvas, 0, 0);
@@ -583,7 +565,7 @@
                 absoluteMinX = w; absoluteMaxX = 0; absoluteMinY = h; absoluteMaxY = 0;
                 for (let y = 0; y < h; y++) {
                     for (let x = 0; x < w; x++) {
-                        if (frameBufferData.data[(y * w + x) * 4] < 240) {
+                        if (frameBufferData.data[(y * w + x) * 4] < 253) {
                             if (x < absoluteMinX) absoluteMinX = x; if (x > absoluteMaxX) absoluteMaxX = x;
                             if (y < absoluteMinY) absoluteMinY = y; if (y > absoluteMaxY) absoluteMaxY = y;
                         }
@@ -594,6 +576,12 @@
             if (!assetInkDetected || absoluteMinX >= absoluteMaxX || absoluteMinY >= absoluteMaxY) {
                 absoluteMinX = 0; absoluteMinY = 0; absoluteMaxX = w; absoluteMaxY = h;
             }
+
+            // Anti-Clipping Guard Matrix: Expanding structural scan box layout by a safe 4px perimeter to preserve long tails ('p', 'g', 'y')
+            absoluteMinX = Math.max(0, absoluteMinX - 4);
+            absoluteMinY = Math.max(0, absoluteMinY - 4);
+            absoluteMaxX = Math.min(w - 1, absoluteMaxX + 4);
+            absoluteMaxY = Math.min(h - 1, absoluteMaxY + 4);
 
             let contentWidth = absoluteMaxX - absoluteMinX + 1;
             let contentHeight = absoluteMaxY - absoluteMinY + 1;
