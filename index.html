@@ -193,6 +193,7 @@
         
         let activeThresholdBias = 14;
         let targetInkProfile = 'black'; 
+        let masterFineSkew = 0; // Fixed variable to lock baseline adjustment
 
         let appStateStorage = { 'sig_image_counter': '1', 'sig_counter_last_reset': '0' };
         function fetchInternalValue(key) {
@@ -309,7 +310,7 @@
         function flushApplicationContext() {
             currentPipelineExecutionId++; 
             dropActiveBlobReferences();
-            masterImageMemory = null; finalOutputBlob = null; persistentAngleDegrees = 0;
+            masterImageMemory = null; finalOutputBlob = null; persistentAngleDegrees = 0; masterFineSkew = 0;
             activeThresholdBias = 14; densitySlider.value = 14; densityValue.textContent = "Normal";
             targetInkProfile = 'black'; updateColorButtons(colorBlack);
             fileInput.value = ''; previewImage.src = '';
@@ -340,6 +341,7 @@
                 placeholderText.classList.add('hidden');
                 previewBox.classList.remove('hidden');
                 persistentAngleDegrees = 0; 
+                masterFineSkew = 0;
                 processComputationalTransform(true); 
             };
             masterImageMemory.src = base64SourceData;
@@ -562,12 +564,17 @@
             if (executionIdToken !== currentPipelineExecutionId) return;
             processingCtx.putImageData(frameBufferData, 0, 0);
 
-            let calculatedFineSkew = computeMicroBaselineSkew(linearDataPixels, w, h);
-            if (Math.abs(calculatedFineSkew) > 0.01) {
+            // Compute fine skew only during the initial automated scan pass
+            if (runAutoDetectPass) {
+                masterFineSkew = computeMicroBaselineSkew(linearDataPixels, w, h);
+            }
+
+            // Apply locked master fine skew transformation cleanly across rotations
+            if (Math.abs(masterFineSkew) > 0.01) {
                 const skewCanvas = document.createElement('canvas'); skewCanvas.width = w; skewCanvas.height = h;
                 const skewCtx = skewCanvas.getContext('2d');
                 skewCtx.fillStyle = '#ffffff'; skewCtx.fillRect(0, 0, w, h);
-                skewCtx.translate(w / 2, h / 2); skewCtx.rotate((calculatedFineSkew * Math.PI) / 180);
+                skewCtx.translate(w / 2, h / 2); skewCtx.rotate((masterFineSkew * Math.PI) / 180);
                 skewCtx.drawImage(processingCanvas, -w / 2, -h / 2);
                 
                 processingCtx.clearRect(0, 0, w, h); processingCtx.drawImage(skewCanvas, 0, 0);
