@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise Signature Optimization Tool Pro</title>
+    <title>Signature Optimization Tool Pro</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,7 +59,7 @@
         <div class="mb-6 flex items-start justify-between">
             <div>
                 <div class="flex items-center gap-2.5">
-                    <h1 class="text-2xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Signature tool</h1>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Signature Tool</h1>
                     <span class="text-[10px] font-bold tracking-widest uppercase bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/20 mt-0.5 shadow-sm">V1.0 core</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-1">Intelligent Signature Processing for Digital KYC & Document Verification.</p>
@@ -74,12 +74,12 @@
         <div id="dropZone" class="relative group inner-bg border-2 border-dashed border-slate-800 rounded-2xl p-5 flex flex-col items-center justify-center min-h-[270px] transition-all duration-200 hover:border-indigo-500 hover:bg-slate-900/10 cursor-pointer overflow-hidden">
             
             <div id="canvasToolbar" class="absolute top-4 right-4 flex gap-2 hidden z-20">
-                <button id="rotateBtn" type="button" title="Rotate 90° Clockwise" class="p-2.5 rounded-xl border border-slate-700 bg-slate-800/95 hover:bg-slate-700 text-slate-300 hover:text-white transform active:scale-[0.97] transition-all duration-150 shadow-md flex items-center justify-center">
+                <button id="rotateBtn" type="button" title="Rotate 90° Clockwise" class="p-2.5 rounded-xl border border-slate-700 bg-slate-800/95 hover:bg-slate-700 text-slate-300 hover:text-white transform active:scale-[0.97] transition-all duration-150 shadow-md flex items-center justify-center cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
                 </button>
-                <button id="clearBtn" type="button" title="Clear Canvas and Reset App" class="p-2.5 rounded-xl border border-rose-950/60 bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 transform active:scale-[0.97] transition-all duration-150 shadow-md flex items-center justify-center">
+                <button id="clearBtn" type="button" title="Clear Canvas and Reset App" class="p-2.5 rounded-xl border border-rose-950/60 bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 transform active:scale-[0.97] transition-all duration-150 shadow-md flex items-center justify-center cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                     </svg>
@@ -117,13 +117,13 @@
             <div class="space-y-2">
                 <span class="text-xs font-semibold tracking-wide text-slate-400 block">Signature Ink Profile</span>
                 <div class="grid grid-cols-3 gap-2">
-                    <button type="button" id="colorBlack" class="py-2 px-3 border border-slate-700 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-white flex items-center justify-center gap-1.5 bg-slate-800/40">
+                    <button type="button" id="colorBlack" class="py-2 px-3 border border-slate-700 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-white flex items-center justify-center gap-1.5 bg-slate-800/40 cursor-pointer">
                         <span class="w-2 h-2 rounded-full bg-black border border-slate-600"></span> Black Ink
                     </button>
-                    <button type="button" id="colorNavy" class="py-2 px-3 border border-slate-800 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-slate-400 flex items-center justify-center gap-1.5">
+                    <button type="button" id="colorNavy" class="py-2 px-3 border border-slate-800 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-slate-400 flex items-center justify-center gap-1.5 cursor-pointer">
                         <span class="w-2 h-2 rounded-full bg-blue-950"></span> Legal Navy
                     </button>
-                    <button type="button" id="colorBlue" class="py-2 px-3 border border-slate-800 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-slate-400 flex items-center justify-center gap-1.5">
+                    <button type="button" id="colorBlue" class="py-2 px-3 border border-slate-800 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-slate-400 flex items-center justify-center gap-1.5 cursor-pointer">
                         <span class="w-2 h-2 rounded-full bg-indigo-600"></span> Royal Blue
                     </button>
                 </div>
@@ -133,7 +133,7 @@
         <div class="mt-5 grid grid-cols-3 gap-2.5 bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 text-center text-xs select-none">
             <div class="border-r border-slate-800/60 last:border-0">
                 <span class="text-slate-400 block font-medium mb-0.5 tracking-wide">Original Size</span> 
-                <span id="origSize" class="text-slate-300 font-bold text-sm">-</span>
+                <span id="origSize" class="text-slate-100 font-bold text-sm">-</span>
             </div>
             <div class="border-r border-slate-800/60 last:border-0">
                 <span class="text-slate-400 block font-medium mb-0.5 tracking-wide">Optimized Target</span> 
@@ -238,7 +238,7 @@
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) readInputPayload(e.dataTransfer.files[0]);
         });
 
-        dropZone.addEventListener('click', () => { if (!masterImageMemory) fileInput.click(); });
+        dropZone.addEventListener('click', () => { fileInput.click(); });
         fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) readInputPayload(e.target.files[0]); });
 
         window.addEventListener('paste', (e) => {
@@ -288,10 +288,10 @@
             if (enabled) {
                 downloadBtn.disabled = false;
                 downloadBtn.classList.remove('bg-slate-800', 'text-slate-500', 'cursor-not-allowed');
-                downloadBtn.classList.add('bg-white', 'text-slate-950', 'hover:bg-slate-100');
+                downloadBtn.classList.add('bg-white', 'text-slate-950', 'hover:bg-slate-100', 'cursor-pointer');
             } else {
                 downloadBtn.disabled = true;
-                downloadBtn.classList.remove('bg-white', 'text-slate-950', 'hover:bg-slate-100');
+                downloadBtn.classList.remove('bg-white', 'text-slate-950', 'hover:bg-slate-100', 'cursor-pointer');
                 downloadBtn.classList.add('bg-slate-800', 'text-slate-500', 'cursor-not-allowed');
             }
         }
@@ -523,7 +523,6 @@
                     }
                     
                     const idx = (y * w + x) * 4;
-                    // Relaxed detection buffer (< 253) ensures high anti-aliasing preservation around fine cursive scripts
                     if (computedColorOutputValue < 253) {
                         if (targetInkProfile === 'navy') {
                             linearDataPixels[idx]     = Math.floor(computedColorOutputValue * 0.1); 
@@ -577,7 +576,6 @@
                 absoluteMinX = 0; absoluteMinY = 0; absoluteMaxX = w; absoluteMaxY = h;
             }
 
-            // Anti-Clipping Guard Matrix: Expanding structural scan box layout by a safe 4px perimeter to preserve long tails ('p', 'g', 'y')
             absoluteMinX = Math.max(0, absoluteMinX - 4);
             absoluteMinY = Math.max(0, absoluteMinY - 4);
             absoluteMaxX = Math.min(w - 1, absoluteMaxX + 4);
