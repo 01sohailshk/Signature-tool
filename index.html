@@ -100,7 +100,7 @@
                 </div>
             </div>
 
-            <div id="previewBox" class="preview-container hidden rounded-xl p-2 bg-transparent relative transition-all duration-200">
+            <div id="previewBox" class="preview-container hidden rounded-xl p-2 bg-transparent relative transition-all duration-200 w-full">
                 <img id="previewImage" class="max-w-full max-h-[230px] object-contain rounded-lg mx-auto" alt="Processed Output Asset">
             </div>
         </div>
@@ -116,15 +116,15 @@
 
             <div class="space-y-2">
                 <span class="text-xs font-semibold tracking-wide text-slate-400 block">Signature Ink Profile</span>
-                <div class="grid grid-cols-3 gap-2">
-                    <button type="button" id="colorBlack" class="py-2 px-3 border border-slate-700 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-white flex items-center justify-center gap-1.5 bg-slate-800/40">
-                        <span class="w-2 h-2 rounded-full bg-black border border-slate-600"></span> Black Ink
+                <div class="flex flex-wrap md:grid md:grid-cols-3 gap-2">
+                    <button type="button" id="colorBlack" class="flex-1 min-w-[100px] py-2 px-3 border border-slate-700 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-white flex items-center justify-center gap-1.5 bg-slate-800/40">
+                        <span class="w-2 h-2 rounded-full bg-black border border-slate-600 shrink-0"></span> <span class="truncate">Black Ink</span>
                     </button>
-                    <button type="button" id="colorNavy" class="py-2 px-3 border border-slate-800 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-slate-400 flex items-center justify-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-blue-950"></span> Legal Navy
+                    <button type="button" id="colorNavy" class="flex-1 min-w-[100px] py-2 px-3 border border-slate-800 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-slate-400 flex items-center justify-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-950 shrink-0"></span> <span class="truncate">Legal Navy</span>
                     </button>
-                    <button type="button" id="colorBlue" class="py-2 px-3 border border-slate-800 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-slate-400 flex items-center justify-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-indigo-600"></span> Royal Blue
+                    <button type="button" id="colorBlue" class="flex-1 min-w-[100px] py-2 px-3 border border-slate-800 rounded-xl text-xs font-medium hover:bg-slate-800 transition shadow-sm text-slate-400 flex items-center justify-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-indigo-600 shrink-0"></span> <span class="truncate">Royal Blue</span>
                     </button>
                 </div>
             </div>
@@ -244,7 +244,7 @@
             if (!e.clipboardData) return;
             if (e.clipboardData.files && e.clipboardData.files.length > 0) {
                 for (let file of e.clipboardData.files) {
-                    if (file.type.match('image.*')) { readInputPayload(file); return; }
+                    if (file.type && file.type.match('image.*')) { readInputPayload(file); return; }
                 }
             }
         });
@@ -309,7 +309,7 @@
         }
 
         function readInputPayload(file) {
-            if (!file || !file.type.match('image.*')) return;
+            if (!file || !file.type || !file.type.match('image.*')) return;
             currentPipelineExecutionId++;
             cachedOriginalKBs = (file.size / 1024).toFixed(1);
             origSizeEl.textContent = `${cachedOriginalKBs} KB`;
@@ -549,8 +549,6 @@
             if (executionIdToken !== currentPipelineExecutionId) return;
             processingCtx.putImageData(frameBufferData, 0, 0);
 
-            // FIX: Only compute micro-skew if manual button rotation is NOT applied (workingAngleFrame == 0)
-            // This stops horizontal deskew matrix algorithms from destroying vertical text streams.
             if (workingAngleFrame === 0) {
                 let calculatedFineSkew = computeMicroBaselineSkew(linearDataPixels, w, h);
                 if (Math.abs(calculatedFineSkew) > 0.01) {
@@ -579,7 +577,6 @@
                 absoluteMinX = 0; absoluteMinY = 0; absoluteMaxX = w; absoluteMaxY = h;
             }
 
-            // FIX: Expanded anti-clipping guard threshold parameters from 4px to 20px to protect loops
             absoluteMinX = Math.max(0, absoluteMinX - 20);
             absoluteMinY = Math.max(0, absoluteMinY - 20);
             absoluteMaxX = Math.min(w - 1, absoluteMaxX + 20);
@@ -622,8 +619,8 @@
                 if (executionIdToken !== currentPipelineExecutionId) return;
                 scale -= 0.05;
                 const scaleCanvas = document.createElement('canvas');
-                scaleCanvas.width = Math.max(50, Math.floor(targetCanvasWidth * scale)); 
-                scaleCanvas.height = Math.max(20, Math.floor(targetCanvasHeight * scale));
+                scaleCanvas.width = Math.max(1, Math.floor(targetCanvasWidth * scale)); 
+                scaleCanvas.height = Math.max(1, Math.floor(targetCanvasHeight * scale));
                 const scaleCtx = scaleCanvas.getContext('2d');
                 scaleCtx.imageSmoothingEnabled = true; scaleCtx.imageSmoothingQuality = 'high';
                 scaleCtx.fillStyle = '#ffffff';
