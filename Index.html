@@ -1,1 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HUF Signature Tool</title>
+    <!-- Embedded Dynamic SVG Favicon for the Chrome Tab -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E">
+    
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+    <style>
+        :root {
+            --bg-main: #060814;
+            --panel-bg: #0f1322;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --accent-glow: rgba(37, 99, 235, 0.25);
+            --border: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #64748b;
+            --workspace-bg: #02040a;
+        }
 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(30, 41, 59, 0.5) 0px, transparent 50%);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 12px;
+        }
+
+        .lens-container {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 600px;
+            padding: 1.5rem;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-sizing: border-box;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hint {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
+        }
+
+        .workspace {
+            position: relative;
+            background: var(--workspace-bg);
+            border: 2px dashed #334155;
+            border-radius: 16px;
+            width: 100%;
+            height: 50vh; 
+            max-height: 380px;
+            min-height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            cursor: pointer;
+            outline: none;
+            touch-action: none;
+        }
+
+        .workspace:focus-within, .workspace.dragover {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+
+        .upload-placeholder {
+            text-align: center;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            height: 100%;
+            padding: 16px;
+            box-sizing: border-box;
+            transition: transform 0.2s ease;
+            z-index: 1;
+        }
+
+        .workspace:hover .upload-placeholder {
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--accent);
+            padding: 14px;
+            border-radius: 16px;
+            display: inline-flex;
+            box-shadow: inset 0 0 12px rgba(37, 99, 235, 0.05);
+        }
+
+        .upload-placeholder p { 
+            font-size: 0.95rem; 
+            font-weight: 600; 
+            color: #e2e8f0; 
+            margin: 0;
+            line-height: 1.3;
+        }
+        .upload-placeholder span { 
+            font-size: 0.75rem; 
+            color: var(--text-muted); 
+            max-width: 90%;
+            line-height: 1.4;
+        }
+
+        .canvas-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            cursor: crosshair;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        #lens-canvas {
+            display: block;
+            border-radius: 8px;
+            max-height: 90%;
+            max-width: 95%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 2;
+            min-width: 180px;
+            box-shadow: 0 4px 14px var(--accent-glow);
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.04);
+            color: #e2e8f0;
+            box-shadow: none;
+            flex: 1;
+            min-width: 50px;
+            max-width: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .btn-text {
+            background: transparent;
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s;
+        }
+
+        .btn-text:hover {
+            color: #60a5fa;
+            text-decoration: underline;
+        }
+
+        .keyboard-hint {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .keyboard-hint kbd {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 1px 4px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+        }
+
+        #file-input { display: none; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 500px) {
+            .lens-container {
+                padding: 1rem;
+                border-radius: 16px;
+            }
+            .upload-placeholder p {
+                font-size: 0.85rem;
+                white-space: normal;
+            }
+            .upload-placeholder span {
+                font-size: 0.7rem;
+            }
+            .keyboard-hint {
+                display: none;
+            }
+            .action-bar {
+                flex-direction: row;
+            }
+            .btn-secondary {
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="lens-container">
+        <header>
+            <h1><i data-lucide="scan-eye" style="color:var(--accent)"></i> HUF Signature Tool</h1>
+            <span class="hint">Instant Paste Active</span>
+        </header>
+
+        <div class="workspace" id="dropzone" tabindex="0">
+            <div class="upload-placeholder" id="placeholder">
+                <div class="upload-icon"><i data-lucide="copy" width="20" height="20"></i></div>
+                <p>Ctrl + V to Paste, or Tap/Click to Load</p>
+                <span>Draw selection directly over signature to crop. Click button or press Enter to download under 18KB.</span>
+            </div>
+
+            <div class="canvas-wrapper" id="wrapper">
+                <canvas id="lens-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="control-panel" id="controls" style="display: none;">
+            <div class="action-bar">
+                <button class="btn btn-secondary" id="rotate-btn" title="Rotate 90° (R)">
+                    <i data-lucide="rotate-cw" width="16" height="16"></i>
+                </button>
+                <button class="btn btn-secondary" id="reset-btn" title="Clear Canvas (Del)">
+                    <i data-lucide="trash-2" width="16" height="16"></i>
+                </button>
+                <button class="btn" id="download-btn">
+                    <i data-lucide="download" width="16" height="16"></i> Download
+                </button>
+            </div>
+
+            <div class="keyboard-hint">
+                <span id="adjust-prompt" style="display: none;">
+                    <button class="btn-text" id="re-crop-btn"><i data-lucide="crop" width="12"></i> Adjust Crop Box</button>
+                </span>
+                <span><kbd>Ctrl+Z</kbd> Undo Crop</span>
+                <span><kbd>R</kbd> Rotate</span>
+                <span><kbd>Delete</kbd> Reset</span>
+                <span><kbd>Enter</kbd> Download</span>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="file-input" accept="image/*">
+
+    <script>
+        lucide.createIcons();
+
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+        const placeholder = document.getElementById('placeholder');
+        const wrapper = document.getElementById('wrapper');
+        const controls = document.getElementById('controls');
+        const canvas = document.getElementById('lens-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const offscreenCanvas = document.createElement('canvas');
+        const offscreenCtx = offscreenCanvas.getContext('2d');
+
+        const rotateBtn = document.getElementById('rotate-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const reCropBtn = document.getElementById('re-crop-btn');
+        const adjustPrompt = document.getElementById('adjust-prompt');
+
+        let sourceImg = null;
+        let rotation = 0;
+        let scale = 1;
+        let downloadCount = 0; 
+
+        let crop = { active: false, startX: 0, startY: 0, x: 0, y: 0, w: 0, h: 0 };
+        let confirmedCrop = null; 
+        let isDrawing = false;
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (sourceImg) renderWorkspace();
+        });
+        resizeObserver.observe(dropzone);
+
+        window.addEventListener('paste', e => {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) loadImage(items[i].getAsFile());
+            }
+        });
+
+        window.addEventListener('keydown', e => {
+            if (!sourceImg) return;
+            
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                if (confirmedCrop) {
+                    confirmedCrop = null;
+                    renderWorkspace();
+                }
+                return;
+            }
+
+            if (e.ctrlKey || e.metaKey) return;
+
+            if (e.key.toLowerCase() === 'r') {
+                e.preventDefault();
+                rotateImage90();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                outputSignature();
+            } else if (e.key === 'Delete' || e.key === 'Backspace') {
+                resetAll();
+            }
+        });
+
+        dropzone.addEventListener('click', (e) => { if(!sourceImg) fileInput.click(); });
+        fileInput.addEventListener('change', e => { if(e.target.files[0]) loadImage(e.target.files[0]); });
+
+        window.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        window.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        window.addEventListener('drop', e => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if(e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+        });
+
+        rotateBtn.addEventListener('click', rotateImage90);
+        resetBtn.addEventListener('click', resetAll);
+        downloadBtn.addEventListener('click', outputSignature);
+
+        canvas.addEventListener('dblclick', () => {
+            if (confirmedCrop) {
+                confirmedCrop = null;
+                renderWorkspace();
+            }
+        });
+        reCropBtn.addEventListener('click', () => {
+            confirmedCrop = null;
+            renderWorkspace();
+        });
+
+        function rotateImage90() {
+            if (!sourceImg) return;
+            let oldW = canvas.width;
+            let oldH = canvas.height;
+            rotation = (rotation + 90) % 360;
+
+            if (confirmedCrop) {
+                let prev = { ...confirmedCrop };
+                confirmedCrop = {
+                    x: oldH - (prev.y + prev.h),
+                    y: prev.x,
+                    w: prev.h,
+                    h: prev.w
+                };
+            }
+            renderWorkspace();
+        }
+
+        function resetAll() {
+            sourceImg = null; 
+            rotation = 0; 
+            crop.active = false; 
+            confirmedCrop = null;
+            placeholder.style.display = 'flex';
+            wrapper.style.display = 'none';
+            controls.style.display = 'none';
+            fileInput.value = '';
+        }
+
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    sourceImg = img;
+                    rotation = 0;
+                    crop.active = false;
+                    confirmedCrop = null;
+                    placeholder.style.display = 'none';
+                    wrapper.style.display = 'flex';
+                    controls.style.display = 'flex';
+                    renderWorkspace();
+                    dropzone.focus();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderWorkspace() {
+            if (!sourceImg) return;
+
+            let origW = (rotation === 90 || rotation === 270) ? sourceImg.height : sourceImg.width;
+            let origH = (rotation === 90 || rotation === 270) ? sourceImg.width : sourceImg.height;
+
+            const maxW = dropzone.clientWidth - 32;
+            const maxH = dropzone.clientHeight - 32;
+
+            let displayW = origW;
+            let displayH = origH;
+
+            if (displayW > maxW) { displayH = (displayH * maxW) / displayW; displayW = maxW; }
+            if (displayH > maxH) { displayW = (displayW * maxH) / displayH; displayH = maxH; }
+
+            scale = origW / displayW;
+
+            offscreenCanvas.width = displayW;
+            offscreenCanvas.height = displayH;
+            offscreenCtx.clearRect(0, 0, displayW, displayH);
+            offscreenCtx.save();
+            offscreenCtx.translate(displayW / 2, displayH / 2);
+            offscreenCtx.rotate((rotation * Math.PI) / 180);
+            let drawW = (rotation === 90 || rotation === 270) ? displayH : displayW;
+            let drawH = (rotation === 90 || rotation === 270) ? displayW : displayH;
+            offscreenCtx.drawImage(sourceImg, -drawW / 2, -drawH / 2, drawW, drawH);
+            offscreenCtx.restore();
+
+            if (confirmedCrop) {
+                adjustPrompt.style.display = 'inline';
+                canvas.width = confirmedCrop.w;
+                canvas.height = confirmedCrop.h;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(offscreenCanvas, confirmedCrop.x, confirmedCrop.y, confirmedCrop.w, confirmedCrop.h, 0, 0, confirmedCrop.w, confirmedCrop.h);
+                return;
+            }
+
+            adjustPrompt.style.display = 'none';
+            canvas.width = displayW;
+            canvas.height = displayH;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (isDrawing && crop.active) {
+                ctx.drawImage(offscreenCanvas, 0, 0);
+                ctx.fillStyle = 'rgba(2, 4, 10, 0.65)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if (crop.w > 4 && crop.h > 4) {
+                    ctx.drawImage(
+                        offscreenCanvas, 
+                        Math.floor(crop.x), Math.floor(crop.y), Math.ceil(crop.w), Math.ceil(crop.h),
+                        Math.floor(crop.x), Math.floor(crop.y), Math.ceil(crop.w), Math.ceil(crop.h)
+                    );
+
+                    ctx.strokeStyle = '#2563eb';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(crop.x, crop.y, crop.w, crop.h);
+                }
+            } else {
+                ctx.drawImage(offscreenCanvas, 0, 0);
+            }
+        }
+
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+            const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function onStart(e) {
+            if (e.type === 'touchstart') {
+                this.isTouch = true; 
+            } else if (this.isTouch) {
+                return; 
+            }
+
+            if (confirmedCrop) return; 
+            const pos = getCoords(e);
+            crop.active = true;
+            crop.startX = pos.x;
+            crop.startY = pos.y;
+            crop.x = pos.x;
+            crop.y = pos.y;
+            crop.w = 0;
+            crop.h = 0;
+            isDrawing = true;
+        }
+
+        function onMove(e) {
+            if (!sourceImg || confirmedCrop || !isDrawing) return;
+            
+            if (e.cancelable) e.preventDefault();
+
+            const pos = getCoords(e);
+            let rawW = pos.x - crop.startX;
+            let rawH = pos.y - crop.startY;
+
+            let targetX = rawW < 0 ? crop.startX + rawW : crop.startX;
+            let targetY = rawH < 0 ? crop.startY + rawH : crop.startY;
+            let targetW = Math.abs(rawW);
+            let targetH = Math.abs(rawH);
+
+            if (targetX < 0) { targetW += targetX; targetX = 0; }
+            if (targetY < 0) { targetH += targetY; targetY = 0; }
+            if (targetX + targetW > canvas.width) { targetW = canvas.width - targetX; }
+            if (targetY + targetH > canvas.height) { targetH = canvas.height - targetY; }
+
+            crop.x = targetX;
+            crop.y = targetY;
+            crop.w = targetW;
+            crop.h = targetH;
+
+            renderWorkspace();
+        }
+
+        function onEnd() {
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            if (crop.active && crop.w > 10 && crop.h > 10) {
+                confirmedCrop = {
+                    x: Math.floor(crop.x),
+                    y: Math.floor(crop.y),
+                    w: Math.ceil(crop.w),
+                    h: Math.ceil(crop.h)
+                };
+                renderWorkspace();
+            } else {
+                crop.active = false;
+                renderWorkspace();
+            }
+        }
+
+        canvas.addEventListener('mousedown', onStart);
+        canvas.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+
+        canvas.addEventListener('touchstart', onStart, { passive: true });
+        canvas.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onEnd);
+
+        function outputSignature() {
+            if (!sourceImg) return;
+
+            const stage = document.createElement('canvas');
+            if (rotation === 90 || rotation === 270) {
+                stage.width = sourceImg.height; stage.height = sourceImg.width;
+            } else {
+                stage.width = sourceImg.width; stage.height = sourceImg.height;
+            }
+
+            const sCtx = stage.getContext('2d');
+            sCtx.translate(stage.width / 2, stage.height / 2);
+            sCtx.rotate((rotation * Math.PI) / 180);
+            let dW = (rotation === 90 || rotation === 270) ? stage.height : stage.width;
+            let dH = (rotation === 90 || rotation === 270) ? stage.width : stage.height;
+            sCtx.drawImage(sourceImg, -dW / 2, -dH / 2, dW, dH);
+
+            let srcX = 0, srcY = 0, srcW = stage.width, srcH = stage.height;
+            if (confirmedCrop) {
+                srcX = confirmedCrop.x * scale; srcY = confirmedCrop.y * scale;
+                srcW = confirmedCrop.w * scale; srcH = confirmedCrop.h * scale;
+            }
+
+            const MAX_BYTES = 18 * 1024;
+            let quality = 0.95;
+            let dimensionScale = 1.0;
+            let finalDataUrl = null;
+
+            while (dimensionScale > 0.1) {
+                const finalCanvas = document.createElement('canvas');
+                const fCtx = finalCanvas.getContext('2d');
+                
+                let targetW = Math.max(1, Math.floor(srcW * dimensionScale));
+                let targetH = Math.max(1, Math.floor(srcH * dimensionScale));
+                
+                finalCanvas.width = targetW;
+                finalCanvas.height = targetH;
+                
+                fCtx.fillStyle = '#FFFFFF';
+                fCtx.fillRect(0, 0, targetW, targetH);
+                fCtx.drawImage(stage, srcX, srcY, srcW, srcH, 0, 0, targetW, targetH);
+
+                for (let q = quality; q >= 0.2; q -= 0.1) {
+                    finalDataUrl = finalCanvas.toDataURL('image/jpeg', q);
+                    const decodedBytes = window.atob(finalDataUrl.split(',')[1]).length;
+
+                    if (decodedBytes < MAX_BYTES) {
+                        triggerDownload(finalDataUrl);
+                        return;
+                    }
+                }
+                
+                dimensionScale -= 0.15;
+                quality = 0.8;
+            }
+
+            if (finalDataUrl) {
+                triggerDownload(finalDataUrl);
+            }
+        }
+
+        function triggerDownload(dataUrl) {
+            downloadCount += 1; 
+            const link = document.createElement('a');
+            link.download = `HUF Sign ${downloadCount}.jpg`;
+            link.href = dataUrl;
+            link.click();
+        }
+    </script>
+</body>
+</html>
