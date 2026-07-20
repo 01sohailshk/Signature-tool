@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise Signature Optimization Tool Pro</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,18 +13,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        html, body {
-            overflow-x: hidden;
-            overscroll-behavior: none; 
-        }
         body { 
             background-color: #090d16; 
             font-family: 'Inter', sans-serif;
         }
-        .card-bg { 
-            background-color: #111827; 
-            touch-action: manipulation; 
-        }
+        .card-bg { background-color: #111827; }
         .inner-bg { background-color: #070a12; }
         
         input[type="range"] {
@@ -33,24 +26,19 @@
             background: #1f2937;
             height: 6px;
             border-radius: 9999px;
-            touch-action: none; 
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 24px; 
-            height: 24px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: #6366f1;
             cursor: pointer;
             transition: transform 0.1s ease;
         }
         input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.1);
-        }
-        
-        button, #dropZone {
-            touch-action: manipulation;
+            transform: scale(1.2);
         }
     </style>
 </head>
@@ -108,7 +96,7 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-300">Click to upload or press <span class="text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 text-xs mx-0.5">Ctrl + V</span> to paste</p>
-                    <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">Manual Orientation • Smart Compression • Background Optimization • High-Quality Output • Secure Local Processing.</p>
+                    <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">Manual Clockwise Rotation • Smart Compression • Background Optimization • High-Quality Output • Secure Local Processing.</p>
                 </div>
             </div>
 
@@ -346,12 +334,16 @@
             if (!masterImageMemory) return;
             const executionIdToken = ++currentPipelineExecutionId;
             const processingCtx = processingCanvas.getContext('2d', { willReadFrequently: true });
+            
             processingCtx.imageOrientation = 'from-image';
+            processingCtx.imageSmoothingEnabled = true;
+            processingCtx.imageSmoothingQuality = 'high';
 
             const originalWidth = masterImageMemory.naturalWidth;
             const originalHeight = masterImageMemory.naturalHeight;
-            let totalCompositeRotation = persistentAngleDegrees % 360;
+            let totalCompositeRotation = persistentAngleDegrees;
 
+            // Enforce clean rectangular frames regardless of the variable switch angles
             if (totalCompositeRotation === 90 || totalCompositeRotation === 270) { 
                 processingCanvas.width = originalHeight; 
                 processingCanvas.height = originalWidth; 
@@ -360,6 +352,8 @@
                 processingCanvas.height = originalHeight; 
             }
 
+            processingCtx.imageSmoothingEnabled = true;
+            processingCtx.imageSmoothingQuality = 'high';
             processingCtx.fillStyle = '#ffffff'; processingCtx.fillRect(0, 0, processingCanvas.width, processingCanvas.height);
             processingCtx.translate(processingCanvas.width / 2, processingCanvas.height / 2);
             processingCtx.rotate((totalCompositeRotation * Math.PI) / 180);
@@ -443,36 +437,34 @@
                 absoluteMinX = 0; absoluteMinY = 0; absoluteMaxX = w; absoluteMaxY = h;
             }
 
-            absoluteMinX = Math.max(0, absoluteMinX - 45);
-            absoluteMinY = Math.max(0, absoluteMinY - 45);
-            absoluteMaxX = Math.min(w - 1, absoluteMaxX + 45);
-            absoluteMaxY = Math.min(h - 1, absoluteMaxY + 45);
+            absoluteMinX = Math.max(0, absoluteMinX - 20);
+            absoluteMinY = Math.max(0, absoluteMinY - 20);
+            absoluteMaxX = Math.min(w - 1, absoluteMaxX + 20);
+            absoluteMaxY = Math.min(h - 1, absoluteMaxY + 20);
 
             let contentWidth = absoluteMaxX - absoluteMinX + 1;
             let contentHeight = absoluteMaxY - absoluteMinY + 1;
             
-            let targetCanvasWidth = Math.max(contentWidth * 1.25, 600);
-            let targetCanvasHeight = Math.max(contentHeight * 1.35, 350);
-
-            if (targetCanvasHeight > targetCanvasWidth * 0.65) {
-                targetCanvasWidth = targetCanvasHeight * 1.6;
-            }
+            let horizontalPadding = Math.max(28, Math.floor(contentWidth * 0.06));
+            let verticalPadding = Math.max(20, Math.floor(contentHeight * 0.06));
 
             let finalCropCanvas = document.createElement('canvas');
-            finalCropCanvas.width = Math.round(targetCanvasWidth);
-            finalCropCanvas.height = Math.round(targetCanvasHeight);
+            let targetCanvasWidth = contentWidth + (horizontalPadding * 2);
+            let targetCanvasHeight = contentHeight + (verticalPadding * 2);
+
+            finalCropCanvas.width = targetCanvasWidth;
+            finalCropCanvas.height = targetCanvasHeight;
 
             let finalCropCtx = finalCropCanvas.getContext('2d');
+            finalCropCtx.imageSmoothingEnabled = true;
+            finalCropCtx.imageSmoothingQuality = 'high';
             finalCropCtx.fillStyle = '#ffffff';
-            finalCropCtx.fillRect(0, 0, finalCropCanvas.width, finalCropCanvas.height);
-
-            let targetXPos = (finalCropCanvas.width - contentWidth) / 2;
-            let targetYPos = (finalCropCanvas.height - contentHeight) / 2;
+            finalCropCtx.fillRect(0, 0, targetCanvasWidth, targetCanvasHeight);
 
             finalCropCtx.drawImage(
                 processingCanvas,
                 absoluteMinX, absoluteMinY, contentWidth, contentHeight, 
-                targetXPos, targetYPos, contentWidth, contentHeight 
+                horizontalPadding, verticalPadding, contentWidth, contentHeight 
             );
 
             let quality = 0.88, scale = 1.0;
@@ -489,8 +481,8 @@
                 if (executionIdToken !== currentPipelineExecutionId) return;
                 scale -= 0.05;
                 const scaleCanvas = document.createElement('canvas');
-                scaleCanvas.width = Math.max(1, Math.floor(finalCropCanvas.width * scale)); 
-                scaleCanvas.height = Math.max(1, Math.floor(finalCropCanvas.height * scale));
+                scaleCanvas.width = Math.max(1, Math.floor(targetCanvasWidth * scale)); 
+                scaleCanvas.height = Math.max(1, Math.floor(targetCanvasHeight * scale));
                 const scaleCtx = scaleCanvas.getContext('2d');
                 scaleCtx.imageSmoothingEnabled = true; scaleCtx.imageSmoothingQuality = 'high';
                 scaleCtx.fillStyle = '#ffffff';
