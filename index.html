@@ -15,7 +15,6 @@
     <style>
         html, body {
             overflow-x: hidden;
-            /* Prevents the bouncing/pull-to-refresh pull gestures on mobile viewports */
             overscroll-behavior: none; 
         }
         body { 
@@ -24,7 +23,6 @@
         }
         .card-bg { 
             background-color: #111827; 
-            /* Ensures the core card container doesn't drag the page window */
             touch-action: manipulation; 
         }
         .inner-bg { background-color: #070a12; }
@@ -35,13 +33,12 @@
             background: #1f2937;
             height: 6px;
             border-radius: 9999px;
-            /* CRITICAL FIX: Stops your finger from dragging the whole app when sliding */
             touch-action: none; 
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 24px; /* Slightly larger for easier mobile touch accuracy */
+            width: 24px; 
             height: 24px;
             border-radius: 50%;
             background: #6366f1;
@@ -52,7 +49,6 @@
             transform: scale(1.1);
         }
         
-        /* Stop buttons and drop-zones from passing drag gestures to the window background */
         button, #dropZone {
             touch-action: manipulation;
         }
@@ -262,7 +258,6 @@
             }
         });
 
-        // Safe touch adjustments for input ranges
         densitySlider.addEventListener('input', (e) => {
             activeThresholdBias = parseInt(e.target.value);
             if (activeThresholdBias < 11) densityValue.textContent = "Light Ink";
@@ -345,31 +340,6 @@
                 processComputationalTransform(); 
             };
             masterImageMemory.src = base64SourceData;
-        }
-
-        function computeMicroBaselineSkew(pixels, w, h) {
-            let sampleYPoints = [], sampleXPoints = [];
-            for (let y = 15; y < h - 15; y += 4) {
-                for (let x = 15; x < w - 15; x += 4) {
-                    if (pixels[(y * w + x) * 4] < 140) { sampleXPoints.push(x); sampleYPoints.push(y); }
-                }
-            }
-            if (sampleXPoints.length < 30) return 0;
-
-            let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-            const totalPoints = sampleXPoints.length;
-            for (let i = 0; i < totalPoints; i++) {
-                sumX += sampleXPoints[i]; sumY += sampleYPoints[i];
-                sumXY += sampleXPoints[i] * sampleYPoints[i]; sumXX += sampleXPoints[i] * sampleXPoints[i];
-            }
-
-            let calculatedDenominator = (totalPoints * sumXX - sumX * sumX);
-            if (Math.abs(calculatedDenominator) < 1e-5) return 0;
-            
-            let regressionSlope = (totalPoints * sumXY - sumX * sumY) / calculatedDenominator;
-            let rawDegreesValue = Math.atan(regressionSlope) * (180 / Math.PI);
-            if (Math.abs(rawDegreesValue) > 40 || Math.abs(rawDegreesValue) <= 2.0) return 0; 
-            return -rawDegreesValue;
         }
 
         async function processComputationalTransform() {
@@ -468,30 +438,6 @@
             }
             if (executionIdToken !== currentPipelineExecutionId) return;
             processingCtx.putImageData(frameBufferData, 0, 0);
-
-            if (totalCompositeRotation === 0) {
-                let calculatedFineSkew = computeMicroBaselineSkew(linearDataPixels, w, h);
-                if (Math.abs(calculatedFineSkew) > 0.01) {
-                    const skewCanvas = document.createElement('canvas'); skewCanvas.width = w; skewCanvas.height = h;
-                    const skewCtx = skewCanvas.getContext('2d');
-                    skewCtx.fillStyle = '#ffffff'; skewCtx.fillRect(0, 0, w, h);
-                    skewCtx.translate(w / 2, h / 2); skewCtx.rotate((calculatedFineSkew * Math.PI) / 180);
-                    skewCtx.drawImage(processingCanvas, -w / 2, -h / 2);
-                    
-                    processingCtx.clearRect(0, 0, w, h); processingCtx.drawImage(skewCanvas, 0, 0);
-                    frameBufferData = processingCtx.getImageData(0, 0, w, h);
-                    
-                    absoluteMinX = w; absoluteMaxX = 0; absoluteMinY = h; absoluteMaxY = 0;
-                    for (let y = 0; y < h; y++) {
-                        for (let x = 0; x < w; x++) {
-                            if (frameBufferData.data[(y * w + x) * 4] < 253) {
-                                if (x < absoluteMinX) absoluteMinX = x; if (x > absoluteMaxX) absoluteMaxX = x;
-                                if (y < absoluteMinY) absoluteMinY = y; if (y > absoluteMaxY) absoluteMaxY = y;
-                            }
-                        }
-                    }
-                }
-            }
 
             if (!assetInkDetected || absoluteMinX >= absoluteMaxX || absoluteMinY >= absoluteMaxY) {
                 absoluteMinX = 0; absoluteMinY = 0; absoluteMaxX = w; absoluteMaxY = h;
