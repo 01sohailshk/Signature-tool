@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Enterprise Signature Optimization Tool Pro</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,11 +13,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
+        html, body {
+            overflow-x: hidden;
+            /* Prevents the bouncing/pull-to-refresh pull gestures on mobile viewports */
+            overscroll-behavior: none; 
+        }
         body { 
             background-color: #090d16; 
             font-family: 'Inter', sans-serif;
         }
-        .card-bg { background-color: #111827; }
+        .card-bg { 
+            background-color: #111827; 
+            /* Ensures the core card container doesn't drag the page window */
+            touch-action: manipulation; 
+        }
         .inner-bg { background-color: #070a12; }
         
         input[type="range"] {
@@ -26,19 +35,26 @@
             background: #1f2937;
             height: 6px;
             border-radius: 9999px;
+            /* CRITICAL FIX: Stops your finger from dragging the whole app when sliding */
+            touch-action: none; 
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 24px; /* Slightly larger for easier mobile touch accuracy */
+            height: 24px;
             border-radius: 50%;
             background: #6366f1;
             cursor: pointer;
             transition: transform 0.1s ease;
         }
         input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
+            transform: scale(1.1);
+        }
+        
+        /* Stop buttons and drop-zones from passing drag gestures to the window background */
+        button, #dropZone {
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -96,7 +112,7 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-300">Click to upload or press <span class="text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 text-xs mx-0.5">Ctrl + V</span> to paste</p>
-                    <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">Automatic Orientation • Smart Compression • Background Optimization • High-Quality Output • Secure Local Processing.</p>
+                    <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1.5 leading-relaxed">Manual Orientation • Smart Compression • Background Optimization • High-Quality Output • Secure Local Processing.</p>
                 </div>
             </div>
 
@@ -216,8 +232,7 @@
         window.addEventListener('dragenter', (e) => { 
             e.preventDefault(); 
             dragCounter++;
-            windowDragOverlay.classList.remove('opacity-0'); 
-            windowDragOverlay.classList.remove('pointer-events-none');
+            windowDragOverlay.classList.remove('opacity-0', 'pointer-events-none');
         });
         window.addEventListener('dragover', (e) => { e.preventDefault(); });
         window.addEventListener('dragleave', (e) => { 
@@ -225,15 +240,13 @@
             dragCounter--;
             if (dragCounter <= 0) {
                 dragCounter = 0;
-                windowDragOverlay.classList.add('opacity-0'); 
-                windowDragOverlay.classList.add('pointer-events-none');
+                windowDragOverlay.classList.add('opacity-0', 'pointer-events-none');
             }
         });
         window.addEventListener('drop', (e) => {
             e.preventDefault();
             dragCounter = 0;
-            windowDragOverlay.classList.add('opacity-0'); 
-            windowDragOverlay.classList.add('pointer-events-none');
+            windowDragOverlay.classList.add('opacity-0', 'pointer-events-none');
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) readInputPayload(e.dataTransfer.files[0]);
         });
 
@@ -249,12 +262,13 @@
             }
         });
 
+        // Safe touch adjustments for input ranges
         densitySlider.addEventListener('input', (e) => {
             activeThresholdBias = parseInt(e.target.value);
             if (activeThresholdBias < 11) densityValue.textContent = "Light Ink";
             else if (activeThresholdBias <= 18) densityValue.textContent = "Normal";
             else densityValue.textContent = "High Contrast Bold";
-            processComputationalTransform(false);
+            processComputationalTransform();
         });
 
         function updateColorButtons(selected) {
@@ -266,14 +280,14 @@
             selected.classList.add('bg-slate-800/40', 'border-slate-700', 'text-white');
         }
 
-        colorBlack.addEventListener('click', () => { targetInkProfile = 'black'; updateColorButtons(colorBlack); processComputationalTransform(false); });
-        colorNavy.addEventListener('click', () => { targetInkProfile = 'navy'; updateColorButtons(colorNavy); processComputationalTransform(false); });
-        colorBlue.addEventListener('click', () => { targetInkProfile = 'blue'; updateColorButtons(colorBlue); processComputationalTransform(false); });
+        colorBlack.addEventListener('click', () => { targetInkProfile = 'black'; updateColorButtons(colorBlack); processComputationalTransform(); });
+        colorNavy.addEventListener('click', () => { targetInkProfile = 'navy'; updateColorButtons(colorNavy); processComputationalTransform(); });
+        colorBlue.addEventListener('click', () => { targetInkProfile = 'blue'; updateColorButtons(colorBlue); processComputationalTransform(); });
 
         rotateBtn.addEventListener('click', (e) => { 
             e.stopPropagation(); 
             persistentAngleDegrees = (persistentAngleDegrees + 90) % 360; 
-            processComputationalTransform(false); 
+            processComputationalTransform(); 
         });
         
         clearBtn.addEventListener('click', (e) => { e.stopPropagation(); flushApplicationContext(); });
@@ -322,85 +336,15 @@
 
         function loadBlobIntoMemory(base64SourceData) {
             masterImageMemory = new Image();
-            masterImageMemory.computedBaseAngle = 0; 
             masterImageMemory.onload = () => {
                 canvasToolbar.classList.remove('hidden');
                 tuningControls.classList.remove('hidden');
                 placeholderText.classList.add('hidden');
                 previewBox.classList.remove('hidden');
                 persistentAngleDegrees = 0; 
-                processComputationalTransform(true); 
+                processComputationalTransform(); 
             };
             masterImageMemory.src = base64SourceData;
-        }
-
-        function evaluateSpatialOrientationMatrix(ctx, width, height) {
-            const gridBuffer = ctx.getImageData(0, 0, width, height);
-            const rawBytes = gridBuffer.data;
-            let edgeGrayscaleSum = 0;
-            const matrixCorners = [0, (width - 1) * 4, (height - 1) * width * 4, ((height - 1) * width + (width - 1)) * 4];
-            matrixCorners.forEach(ptr => edgeGrayscaleSum += (rawBytes[ptr] + rawBytes[ptr+1] + rawBytes[ptr+2]) / 3);
-            let generalizedBgLuminance = edgeGrayscaleSum / 4;
-            let canvasIsDarkBg = generalizedBgLuminance < 125;
-
-            let trueInkMinX = width, trueInkMaxX = 0, trueInkMinY = height, trueInkMaxY = 0;
-            for (let y = 4; y < height - 4; y += 2) {
-                for (let x = 4; x < width - 4; x += 2) {
-                    let memoryIdx = (y * width + x) * 4;
-                    let currentGrayscale = (rawBytes[memoryIdx] + rawBytes[memoryIdx+1] + rawBytes[memoryIdx+2]) / 3;
-                    let inkEncountered = canvasIsDarkBg ? (currentGrayscale > generalizedBgLuminance + 20) : (currentGrayscale < generalizedBgLuminance - 20);
-                    if (inkEncountered && rawBytes[memoryIdx+3] > 50) {
-                        if (x < trueInkMinX) trueInkMinX = x; if (x > trueInkMaxX) trueInkMaxX = x;
-                        if (y < trueInkMinY) trueInkMinY = y; if (y > trueInkMaxY) trueInkMaxY = y;
-                    }
-                }
-            }
-            if (trueInkMinX >= trueInkMaxX || trueInkMinY >= trueInkMaxY) return -999999;
-
-            let coreInkWidth = trueInkMaxX - trueInkMinX + 1;
-            let coreInkHeight = trueInkMaxY - trueInkMinY + 1;
-            
-            if (coreInkWidth <= coreInkHeight) return -500000 + (coreInkWidth - coreInkHeight);
-
-            let horizontalContinuityScore = 0;
-            for (let y = trueInkMinY; y <= trueInkMaxY; y += 2) {
-                let continuousInkRun = 0;
-                for (let x = trueInkMinX; x <= trueInkMaxX; x++) {
-                    let memoryIdx = (y * width + x) * 4;
-                    let currentGrayscale = (rawBytes[memoryIdx] + rawBytes[memoryIdx+1] + rawBytes[memoryIdx+2]) / 3;
-                    let inkEncountered = canvasIsDarkBg ? (currentGrayscale > generalizedBgLuminance + 20) : (currentGrayscale < generalizedBgLuminance - 20);
-                    if (inkEncountered) {
-                        continuousInkRun++;
-                    } else {
-                        if (continuousInkRun > 2) horizontalContinuityScore += Math.pow(continuousInkRun, 1.5);
-                        continuousInkRun = 0;
-                    }
-                }
-                if (continuousInkRun > 2) horizontalContinuityScore += Math.pow(continuousInkRun, 1.5);
-            }
-
-            let verticalDensityDistribution = new Array(coreInkHeight).fill(0);
-            for (let y = trueInkMinY; y <= trueInkMaxY; y++) {
-                for (let x = trueInkMinX; x <= trueInkMaxX; x++) {
-                    let memoryIdx = (y * width + x) * 4;
-                    let currentGrayscale = (rawBytes[memoryIdx] + rawBytes[memoryIdx+1] + rawBytes[memoryIdx+2]) / 3;
-                    let inkEncountered = canvasIsDarkBg ? (currentGrayscale > generalizedBgLuminance + 20) : (currentGrayscale < generalizedBgLuminance - 20);
-                    if (inkEncountered) verticalDensityDistribution[y - trueInkMinY]++;
-                }
-            }
-
-            let peakDensityRow = 0, peakDensityVal = -1;
-            for (let i = 0; i < coreInkHeight; i++) {
-                if (verticalDensityDistribution[i] > peakDensityVal) {
-                    peakDensityVal = verticalDensityDistribution[i];
-                    peakDensityRow = i;
-                }
-            }
-            
-            let normalizedBaselinePos = peakDensityRow / coreInkHeight;
-            let structuralFlowWeight = (normalizedBaselinePos >= 0.40 && normalizedBaselinePos <= 0.88) ? 1000 : 1;
-
-            return horizontalContinuityScore * structuralFlowWeight * (coreInkWidth / coreInkHeight);
         }
 
         function computeMicroBaselineSkew(pixels, w, h) {
@@ -428,7 +372,7 @@
             return -rawDegreesValue;
         }
 
-        async function processComputationalTransform(runAutoDetectPass = false) {
+        async function processComputationalTransform() {
             if (!masterImageMemory) return;
             const executionIdToken = ++currentPipelineExecutionId;
             const processingCtx = processingCanvas.getContext('2d', { willReadFrequently: true });
@@ -436,39 +380,15 @@
 
             const originalWidth = masterImageMemory.naturalWidth;
             const originalHeight = masterImageMemory.naturalHeight;
-            let workingAngleFrame = persistentAngleDegrees;
+            let totalCompositeRotation = persistentAngleDegrees % 360;
 
-            if (runAutoDetectPass) {
-                let layoutScoresMap = {};
-                for (let testAngle of [0, 90, 180, 270]) {
-                    if (executionIdToken !== currentPipelineExecutionId) return;
-                    if (testAngle === 90 || testAngle === 270) { processingCanvas.width = originalHeight; processingCanvas.height = originalWidth; }
-                    else { processingCanvas.width = originalWidth; processingCanvas.height = originalHeight; }
-
-                    processingCtx.fillStyle = '#ffffff'; processingCtx.fillRect(0, 0, processingCanvas.width, processingCanvas.height);
-                    processingCtx.translate(processingCanvas.width / 2, processingCanvas.height / 2);
-                    processingCtx.rotate((testAngle * Math.PI) / 180);
-                    processingCtx.drawImage(masterImageMemory, -originalWidth / 2, -originalHeight / 2);
-                    processingCtx.setTransform(1, 0, 0, 1, 0, 0);
-                    layoutScoresMap[testAngle] = evaluateSpatialOrientationMatrix(processingCtx, processingCanvas.width, processingCanvas.height);
-                }
-
-                let optimalRankedAngle = 0, highestEvaluatedScore = layoutScoresMap[0];
-                for (let angle of [90, 180, 270]) {
-                    if (layoutScoresMap[angle] > highestEvaluatedScore) { highestEvaluatedScore = layoutScoresMap[angle]; optimalRankedAngle = angle; }
-                }
-                
-                masterImageMemory.computedBaseAngle = optimalRankedAngle;
-                workingAngleFrame = 0; 
-                persistentAngleDegrees = 0; 
+            if (totalCompositeRotation === 90 || totalCompositeRotation === 270) { 
+                processingCanvas.width = originalHeight; 
+                processingCanvas.height = originalWidth; 
+            } else { 
+                processingCanvas.width = originalWidth; 
+                processingCanvas.height = originalHeight; 
             }
-
-            if (executionIdToken !== currentPipelineExecutionId) return;
-            
-            let totalCompositeRotation = ((masterImageMemory.computedBaseAngle || 0) + workingAngleFrame) % 360;
-
-            if (totalCompositeRotation === 90 || totalCompositeRotation === 270) { processingCanvas.width = originalHeight; processingCanvas.height = originalWidth; }
-            else { processingCanvas.width = originalWidth; processingCanvas.height = originalHeight; }
 
             processingCtx.fillStyle = '#ffffff'; processingCtx.fillRect(0, 0, processingCanvas.width, processingCanvas.height);
             processingCtx.translate(processingCanvas.width / 2, processingCanvas.height / 2);
@@ -549,7 +469,7 @@
             if (executionIdToken !== currentPipelineExecutionId) return;
             processingCtx.putImageData(frameBufferData, 0, 0);
 
-            if (workingAngleFrame === 0) {
+            if (totalCompositeRotation === 0) {
                 let calculatedFineSkew = computeMicroBaselineSkew(linearDataPixels, w, h);
                 if (Math.abs(calculatedFineSkew) > 0.01) {
                     const skewCanvas = document.createElement('canvas'); skewCanvas.width = w; skewCanvas.height = h;
@@ -577,50 +497,54 @@
                 absoluteMinX = 0; absoluteMinY = 0; absoluteMaxX = w; absoluteMaxY = h;
             }
 
-            absoluteMinX = Math.max(0, absoluteMinX - 20);
-            absoluteMinY = Math.max(0, absoluteMinY - 20);
-            absoluteMaxX = Math.min(w - 1, absoluteMaxX + 20);
-            absoluteMaxY = Math.min(h - 1, absoluteMaxY + 20);
+            absoluteMinX = Math.max(0, absoluteMinX - 45);
+            absoluteMinY = Math.max(0, absoluteMinY - 45);
+            absoluteMaxX = Math.min(w - 1, absoluteMaxX + 45);
+            absoluteMaxY = Math.min(h - 1, absoluteMaxY + 45);
 
             let contentWidth = absoluteMaxX - absoluteMinX + 1;
             let contentHeight = absoluteMaxY - absoluteMinY + 1;
             
-            let horizontalPadding = Math.max(28, Math.floor(contentWidth * 0.06));
-            let verticalPadding = Math.max(20, Math.floor(contentHeight * 0.06));
+            let targetCanvasWidth = Math.max(contentWidth * 1.25, 600);
+            let targetCanvasHeight = Math.max(contentHeight * 1.35, 350);
+
+            if (targetCanvasHeight > targetCanvasWidth * 0.65) {
+                targetCanvasWidth = targetCanvasHeight * 1.6;
+            }
 
             let finalCropCanvas = document.createElement('canvas');
-            let targetCanvasWidth = contentWidth + (horizontalPadding * 2);
-            let targetCanvasHeight = contentHeight + (verticalPadding * 2);
-
-            finalCropCanvas.width = targetCanvasWidth;
-            finalCropCanvas.height = targetCanvasHeight;
+            finalCropCanvas.width = Math.round(targetCanvasWidth);
+            finalCropCanvas.height = Math.round(targetCanvasHeight);
 
             let finalCropCtx = finalCropCanvas.getContext('2d');
             finalCropCtx.fillStyle = '#ffffff';
-            finalCropCtx.fillRect(0, 0, targetCanvasWidth, targetCanvasHeight);
+            finalCropCtx.fillRect(0, 0, finalCropCanvas.width, finalCropCanvas.height);
+
+            let targetXPos = (finalCropCanvas.width - contentWidth) / 2;
+            let targetYPos = (finalCropCanvas.height - contentHeight) / 2;
 
             finalCropCtx.drawImage(
                 processingCanvas,
                 absoluteMinX, absoluteMinY, contentWidth, contentHeight, 
-                horizontalPadding, verticalPadding, contentWidth, contentHeight 
+                targetXPos, targetYPos, contentWidth, contentHeight 
             );
 
             let quality = 0.88, scale = 1.0;
             let outputBlob = await new Promise(res => finalCropCanvas.toBlob(res, targetOutputFormat, quality));
 
-            while (outputBlob.size > 18432 && quality > 0.68) {
+            while (outputBlob && outputBlob.size > 18432 && quality > 0.68) {
                 if (executionIdToken !== currentPipelineExecutionId) return;
                 quality -= 0.04;
                 outputBlob = await new Promise(res => finalCropCanvas.toBlob(res, targetOutputFormat, quality));
             }
 
             let activeCanvas = finalCropCanvas;
-            while (outputBlob.size > 18432 && scale > 0.10) {
+            while (outputBlob && outputBlob.size > 18432 && scale > 0.10) {
                 if (executionIdToken !== currentPipelineExecutionId) return;
                 scale -= 0.05;
                 const scaleCanvas = document.createElement('canvas');
-                scaleCanvas.width = Math.max(1, Math.floor(targetCanvasWidth * scale)); 
-                scaleCanvas.height = Math.max(1, Math.floor(targetCanvasHeight * scale));
+                scaleCanvas.width = Math.max(1, Math.floor(finalCropCanvas.width * scale)); 
+                scaleCanvas.height = Math.max(1, Math.floor(finalCropCanvas.height * scale));
                 const scaleCtx = scaleCanvas.getContext('2d');
                 scaleCtx.imageSmoothingEnabled = true; scaleCtx.imageSmoothingQuality = 'high';
                 scaleCtx.fillStyle = '#ffffff';
@@ -630,7 +554,7 @@
                 outputBlob = await new Promise(res => activeCanvas.toBlob(res, targetOutputFormat, quality));
             }
 
-            if (executionIdToken !== currentPipelineExecutionId) return;
+            if (executionIdToken !== currentPipelineExecutionId || !outputBlob) return;
             finalOutputBlob = outputBlob;
 
             dropActiveBlobReferences();
@@ -651,7 +575,9 @@
             const link = document.createElement('a');
             link.href = downloadBlobUrlRef;
             link.download = `image ${count}.jpg`;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
             pushInternalValue('sig_image_counter', (count + 1).toString());
         });
     </script>
